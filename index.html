@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OneBook.AI - 1日1冊の読書体験</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            overflow: hidden;
+            background: #0a0a0a;
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    <script>
+        let appState = {
+            screen: 'onboarding',
+            user: null,
+            books: [],
+            dailyPick: null,
+            currentBook: null,
+            scrollOffset: 0,
+            nightMode: false,
+            fontSize: 18
+        };
+
+        const sampleBooks = [
+            {
+                id: 1,
+                title: "こころ",
+                author: "夏目漱石",
+                year: 1914,
+                tags: ["文学", "心理", "明治"],
+                synopsis: "明治の知識人の苦悩と孤独を描いた不朽の名作",
+                color: [255, 107, 107],
+                difficulty: 2,
+                readTime: 180,
+                content: "　私わたくしはその人を常に先生と呼んでいた。だからここでもただ先生と書くだけで本名は打ち明けない。これは世間を憚はばかる遠慮というよりも、その方が私にとって自然だからである。私はその人の記憶を呼び起すごとに、すぐ「先生」といいたくなる。筆を執とっても心持は同じ事である。よそよそしい頭文字かしらもじなどはとても使う気にならない。\n\n　私が先生と知り合いになったのは鎌倉である。その時私はまだ若々しい書生であった。暑中休暇を利用して海水浴に行った友達からぜひ来いという端書はがきを受け取ったので、私は多少の金を工面くめんして、出掛ける事にした。私は金の工面に二、三日を費やした。ところが私が鎌倉に着いて三日と経たたないうちに、私を呼び寄せた友達は、急に国元から帰れという電報を受け取った。電報には母が病気だからと断ってあったけれども友達はそれを信じなかった。"
+            },
+            {
+                id: 2,
+                title: "羅生門",
+                author: "芥川龍之介",
+                year: 1915,
+                tags: ["短編", "歴史", "人間"],
+                synopsis: "人間のエゴイズムを鋭く描いた短編の傑作",
+                color: [78, 205, 196],
+                difficulty: 1,
+                readTime: 20,
+                content: "　ある日の暮方の事である。一人の下人げにんが、羅生門らしょうもんの下で雨やみを待っていた。\n\n　広い門の下には、この男のほかに誰もいない。ただ、所々丹にの塗ぬれた、大きな円柱まるばしらに、蟋蟀きりぎりすが一匹とまっている。羅生門が、朱雀大路すざくおおじにある以上は、この男のほかにも、雨やみをする市女笠いちめがさや揉烏帽子もみえぼしが、もう二三人はありそうなものである。それが、この男のほかには誰もいない。\n\n　なぜかというと、この二三年、京都には、地震とか辻風つじかぜとか火事とか饑饉とかいう災わざわいがつづいて起った。そこで洛中らくちゅうのさびれ方は一通りではない。"
+            },
+            {
+                id: 3,
+                title: "走れメロス",
+                author: "太宰治",
+                year: 1940,
+                tags: ["友情", "信頼", "古典"],
+                synopsis: "友情と信頼をテーマにした青春文学の金字塔",
+                color: [255, 195, 0],
+                difficulty: 1,
+                readTime: 30,
+                content: "　メロスは激怒した。必ず、かの邪智暴虐じゃちぼうぎゃくの王を除かなければならぬと決意した。メロスには政治がわからぬ。メロスは、村の牧人である。笛を吹き、羊と遊んで暮して来た。けれども邪悪に対しては、人一倍に敏感であった。\n\n　きょう未明メロスは村を出発し、野を越え山越え、十里はなれた此このシラクスの市にやって来た。メロスには父も、母も無い。女房も無い。十六の、内気な妹と二人暮しだ。この妹は、村の或る律気な一牧人を、近々、花婿はなむことして迎える事になっていた。"
+            },
+            {
+                id: 4,
+                title: "坊っちゃん",
+                author: "夏目漱石",
+                year: 1906,
+                tags: ["教育", "ユーモア", "青春"],
+                synopsis: "正義感の強い青年教師の痛快な物語",
+                color: [199, 121, 208],
+                difficulty: 1,
+                readTime: 120,
+                content: "　親譲りの無鉄砲で小供の時から損ばかりしている。小学校に居る時分学校の二階から飛び降りて一週間ほど腰を抜かした事がある。なぜそんな無闇をしたと聞く人があるかも知れぬ。別段深い理由でもない。新築の二階から首を出していたら、同級生の一人が冗談に、いくら威張っても、そこから飛び降りる事は出来まい。弱虫やあーい。と囃したからである。\n\n　小使に負ぶさって帰って来た時、おやじが大きな眼をして二階ぐらいから飛び降りて腰を抜かす奴があるかと云ったから、この次は抜かさずに飛んで見せますと答えた。"
+            },
+            {
+                id: 5,
+                title: "人間失格",
+                author: "太宰治",
+                year: 1948,
+                tags: ["心理", "自伝的", "深層"],
+                synopsis: "人間存在の根源的な問いを投げかける私小説",
+                color: [255, 82, 82],
+                difficulty: 3,
+                readTime: 150,
+                content: "　私は、その男の写真を三葉、見たことがある。\n\n　一葉は、その男の、幼年時代、とでも言うべきであろうか、十歳前後かと推定される頃の写真であって、その子供が大勢の女のひとに取りかこまれ、（それは、その子供の姉たち、妹たち、それから、従姉妹いとこたちかと想像される）庭園の池のほとりに、荒い縞の袴はかまをはいて立ち、首を三十度ほど左に傾け、醜く笑っている写真である。"
+            },
+            {
+                id: 6,
+                title: "吾輩は猫である",
+                author: "夏目漱石",
+                year: 1905,
+                tags: ["風刺", "ユーモア", "社会"],
+                synopsis: "猫の視点から明治社会を風刺した傑作",
+                color: [108, 92, 231],
+                difficulty: 2,
+                readTime: 200,
+                content: "　吾輩わがはいは猫である。名前はまだ無い。\n\n　どこで生れたかとんと見当けんとうがつかぬ。何でも薄暗いじめじめした所でニャーニャー泣いていた事だけは記憶している。吾輩はここで始めて人間というものを見た。しかもあとで聞くとそれは書生という人間中で一番獰悪どうあくな種族であったそうだ。この書生というのは時々我々を捕つかまえて煮にて食うという話である。"
+            },
+            {
+                id: 7,
+                title: "地獄変",
+                author: "芥川龍之介",
+                year: 1918,
+                tags: ["芸術", "狂気", "歴史"],
+                synopsis: "芸術至上主義の狂気を描いた戦慄の物語",
+                color: [220, 38, 38],
+                difficulty: 3,
+                readTime: 90,
+                content: "　堀川の大殿様のような方は、これまでは固より、後の世には恐らく二人とはいらっしゃいますまい。噂に聞きますと、あの方の御誕生になる前には、大威徳明王の御姿が御母君の夢枕にお立ちになったとか申す事でございますが、兎に角御生れつきから、並々の人間とは御違いになっているようでございます。\n\n　でございますから、あの方の為なさいました事には、一つとして私どもの意表に出ていないものはございません。"
+            }
+        ];
+
+        let onboardingStep = 0;
+        let selectedTags = [];
+        let particles = [];
+        let bookCards = [];
+        let homeScrollY = 0;
+        let targetScrollY = 0;
+
+        const onboardingOptions = [
+            {
+                question: "どんなジャンルに興味がありますか？",
+                options: ["文学", "歴史", "心理", "哲学", "ユーモア"]
+            },
+            {
+                question: "読書の難易度は？",
+                options: ["やさしい", "ほどほど", "じっくり読む"]
+            },
+            {
+                question: "読書の目的は？",
+                options: ["教養", "楽しみ", "自己啓発", "研究"]
+            }
+        ];
+
+        function setup() {
+            let canvas = createCanvas(windowWidth, windowHeight);
+            canvas.parent('canvas-container');
+            textFont('sans-serif');
+            
+            appState.books = sampleBooks;
+            
+            for (let i = 0; i < 60; i++) {
+                particles.push({
+                    x: random(width),
+                    y: random(height),
+                    vx: random(-0.4, 0.4),
+                    vy: random(-0.4, 0.4),
+                    size: random(1.5, 3.5),
+                    alpha: random(40, 130),
+                    pulse: random(TWO_PI)
+                });
+            }
+            
+            initBookCards();
+        }
+
+        function draw() {
+            background(appState.nightMode ? [15, 15, 20] : [10, 10, 15]);
+            drawParticles();
+            
+            switch(appState.screen) {
+                case 'onboarding':
+                    drawOnboarding();
+                    break;
+                case 'home':
+                    drawHome();
+                    break;
+                case 'reader':
+                    drawReader();
+                    break;
+            }
+        }
+
+        function drawParticles() {
+            noStroke();
+            for (let p of particles) {
+                p.pulse += 0.025;
+                let alphaMod = sin(p.pulse) * 25;
+                fill(255, 255, 255, p.alpha + alphaMod);
+                circle(p.x, p.y, p.size);
+                
+                p.x += p.vx;
+                p.y += p.vy;
+                
+                if (p.x < 0 || p.x > width) p.vx *= -1;
+                if (p.y < 0 || p.y > height) p.vy *= -1;
+            }
+        }
+
+        function drawOnboarding() {
+            push();
+            translate(width / 2, height / 2);
+            
+            if (onboardingStep === 0) {
+                let pulse = sin(frameCount * 0.025) * 3;
+                
+                fill(255);
+                textAlign(CENTER, CENTER);
+                textSize(68);
+                textStyle(BOLD);
+                text("OneBook.AI", 0, -210 + pulse);
+                
+                textSize(24);
+                textStyle(NORMAL);
+                fill(180, 180, 200);
+                text("1日1冊、あなたにぴったりの本を", 0, -145);
+                
+                textSize(16);
+                fill(140, 140, 160);
+                text("AIがパーソナライズする読書体験", 0, -110);
+                
+                let btnHover = dist(mouseX, mouseY, width/2, height/2 + 50) < 100;
+                
+                fill(btnHover ? 120 : 80, 200, 255, btnHover ? 255 : 220);
+                rectMode(CENTER);
+                rect(0, 50, 220, 65, 33);
+                
+                fill(255);
+                textSize(20);
+                textStyle(BOLD);
+                text("はじめる", 0, 52);
+                
+                noFill();
+                stroke(100, 200, 255, 40);
+                strokeWeight(2);
+                circle(0, 50, 260 + sin(frameCount * 0.04) * 8);
+                
+            } else {
+                let step = onboardingStep - 1;
+                let question = onboardingOptions[step];
+                
+                fill(255);
+                textAlign(CENTER, CENTER);
+                textSize(30);
+                textStyle(BOLD);
+                text(question.question, 0, -210);
+                
+                let optionsY = -70;
+                let spacing = 85;
+                
+                for (let i = 0; i < question.options.length; i++) {
+                    let y = optionsY + i * spacing;
+                    let isHover = mouseY > height/2 + y - 28 && mouseY < height/2 + y + 28 &&
+                                  mouseX > width/2 - 170 && mouseX < width/2 + 170;
+                    
+                    fill(isHover ? 255 : 210, isHover ? 255 : 210, 255, isHover ? 220 : 110);
+                    rectMode(CENTER);
+                    rect(0, y, 340, 56, 28);
+                    
+                    fill(isHover ? 50 : 255);
+                    textSize(19);
+                    textStyle(isHover ? BOLD : NORMAL);
+                    text(question.options[i], 0, y + 1);
+                }
+                
+                let indicatorY = 260;
+                for (let i = 0; i < 3; i++) {
+                    fill(i < step + 1 ? [100, 200, 255] : [60, 60, 80]);
+                    circle(-28 + i * 28, indicatorY, i < step + 1 ? 11 : 7);
+                }
+                
+                textSize(13);
+                fill(120);
+                text(`ステップ ${step + 1} / 3`, 0, indicatorY + 32);
+            }
+            
+            pop();
+        }
+
+        function drawHome() {
+            homeScrollY = lerp(homeScrollY, targetScrollY, 0.12);
+            
+            push();
+            translate(0, -homeScrollY);
+            
+            fill(25, 25, 35, 245);
+            noStroke();
+            rect(0, homeScrollY, width, 85);
+            
+            fill(255);
+            textSize(30);
+            textStyle(BOLD);
+            textAlign(LEFT, CENTER);
+            text("OneBook.AI", 38, homeScrollY + 42);
+            
+            drawNavButtons();
+            drawDailyPick();
+            drawRecommendations();
+            drawAdSlot(1080);
+            
+            pop();
+        }
+
+        function drawNavButtons() {
+            let buttons = [
+                { label: "ホーム", x: width - 300 },
+                { label: appState.nightMode ? "☀️" : "🌙", x: width - 170 },
+                { label: "設定", x: width - 80 }
+            ];
+            
+            for (let btn of buttons) {
+                let hover = mouseX > btn.x - 45 && mouseX < btn.x + 45 &&
+                           mouseY > homeScrollY + 22 && mouseY < homeScrollY + 62;
+                
+                if (hover) {
+                    fill(100, 200, 255, 25);
+                    rectMode(CENTER);
+                    rect(btn.x, homeScrollY + 42, 85, 38, 19);
+                }
+                
+                fill(hover ? 255 : 175);
+                textSize(17);
+                textStyle(NORMAL);
+                textAlign(CENTER, CENTER);
+                text(btn.label, btn.x, homeScrollY + 42);
+            }
+        }
+
+        function drawDailyPick() {
+            if (!appState.dailyPick) {
+                appState.dailyPick = random(appState.books);
+            }
+            
+            let book = appState.dailyPick;
+            let cardY = 195;
+            let cardW = min(680, width - 90);
+            let cardH = 365;
+            
+            push();
+            translate(width / 2, cardY);
+            
+            fill(book.color[0], book.color[1], book.color[2], 13);
+            rectMode(CENTER);
+            rect(0, 0, cardW, cardH, 22);
+            
+            for (let i = 0; i < 3; i++) {
+                noFill();
+                stroke(book.color[0], book.color[1], book.color[2], 18 - i * 5);
+                strokeWeight(2.5);
+                rect(0, 0, cardW + i * 13, cardH + i * 13, 22);
+            }
+            
+            noStroke();
+            
+            fill(book.color[0], book.color[1], book.color[2], 170);
+            rectMode(CENTER);
+            rect(0, -cardH/2 + 28, 150, 34, 17);
+            fill(255);
+            textSize(14);
+            textStyle(BOLD);
+            textAlign(CENTER, CENTER);
+            text("✨ 今日の一冊", 0, -cardH/2 + 28);
+            
+            fill(255);
+            textSize(44);
+            textStyle(BOLD);
+            text(book.title, 0, -85);
+            
+            fill(215);
+            textSize(21);
+            textStyle(NORMAL);
+            text(book.author, 0, -38);
+            
+            let tagX = -75;
+            for (let i = 0; i < Math.min(3, book.tags.length); i++) {
+                fill(book.color[0], book.color[1], book.color[2], 95);
+                rect(tagX + i * 95, 12, 85, 28, 14);
+                fill(255);
+                textSize(12);
+                text(book.tags[i], tagX + i * 95, 13);
+            }
+            
+            fill(185);
+            textSize(15);
+            textLeading(24);
+            text(book.synopsis, 0, 75, cardW - 95);
+            
+            let buttonY = cardH/2 - 48;
+            let buttonHover = dist(mouseX, mouseY, width/2, cardY + buttonY) < 75;
+            
+            fill(book.color[0], book.color[1], book.color[2], buttonHover ? 250 : 215);
+            circle(0, buttonY, buttonHover ? 85 : 76);
+            
+            fill(255);
+            textSize(19);
+            textStyle(BOLD);
+            text("読む", 0, buttonY + 1);
+            
+            fill(145);
+            textSize(13);
+            text(`📖 約 ${book.readTime}分`, 0, buttonY + 75);
+            
+            pop();
+        }
+
+        function drawRecommendations() {
+            fill(255);
+            textSize(26);
+            textStyle(BOLD);
+            textAlign(LEFT, CENTER);
+            text("あなたへのおすすめ", 55, 665);
+            
+            let numCards = min(4, bookCards.length);
+            let cardWidth = 210;
+            let cardHeight = 290;
+            let cardSpacing = 28;
+            let totalWidth = numCards * cardWidth + (numCards - 1) * cardSpacing;
+            let startX = (width - totalWidth) / 2 + cardWidth / 2;
+            let startY = 810;
+            
+            for (let i = 0; i < numCards; i++) {
+                let card = bookCards[i];
+                let x = startX + i * (cardWidth + cardSpacing);
+                
+                let hover = mouseX > x - cardWidth/2 && mouseX < x + cardWidth/2 &&
+                           mouseY > startY - homeScrollY - cardHeight/2 && 
+                           mouseY < startY - homeScrollY + cardHeight/2;
+                
+                card.hoverScale = lerp(card.hoverScale, hover ? 1.07 : 1.0, 0.14);
+                card.hoverY = lerp(card.hoverY, hover ? -8 : 0, 0.14);
+                
+                push();
+                translate(x, startY + card.hoverY);
+                scale(card.hoverScale);
+                
+                fill(card.color[0], card.color[1], card.color[2], hover ? 170 : 135);
+                rectMode(CENTER);
+                rect(0, 0, cardWidth, cardHeight, 18);
+                
+                noFill();
+                stroke(card.color[0], card.color[1], card.color[2], 90);
+                strokeWeight(1.8);
+                rect(0, 0, cardWidth, cardHeight, 18);
+                noStroke();
+                
+                fill(255);
+                textAlign(CENTER, CENTER);
+                textSize(21);
+                textStyle(BOLD);
+                text(card.title, 0, -75);
+                
+                fill(195);
+                textSize(15);
+                textStyle(NORMAL);
+                text(card.author, 0, -38);
+                
+                fill(255, 255, 255, 140);
+                textSize(12);
+                let diffText = card.difficulty === 1 ? "⭐ やさしい" : 
+                              card.difficulty === 2 ? "⭐⭐ ふつう" : "⭐⭐⭐ じっくり";
+                text(diffText, 0, 8);
+                
+                fill(145);
+                textSize(13);
+                text(`📖 ${card.readTime}分`, 0, 95);
+                
+                pop();
+            }
+        }
+
+        function drawAdSlot(y) {
+            push();
+            translate(width / 2, y);
+            
+            fill(32, 32, 42, 195);
+            rectMode(CENTER);
+            rect(0, 0, min(880, width - 95), 135, 14);
+            
+            fill(115);
+            textAlign(CENTER, CENTER);
+            textSize(11);
+            textStyle(NORMAL);
+            text("SPONSORED", 0, -48);
+            
+            fill(175);
+            textSize(17);
+            text("📚 学びを深める、おすすめの読書サービス", 0, -8);
+            
+            let btnHover = mouseX > width/2 - 65 && mouseX < width/2 + 65 &&
+                          mouseY > y - homeScrollY + 20 && mouseY < y - homeScrollY + 52;
+            
+            fill(100, 200, 255, btnHover ? 195 : 145);
+            rect(0, 36, 130, 32, 16);
+            fill(255);
+            textSize(14);
+            text("詳しく見る →", 0, 37);
+            
+            pop();
+        }
+
+        function drawReader() {
+            let bgColor = appState.nightMode ? [25, 25, 30] : [250, 248, 245];
+            let textColor = appState.nightMode ? [215, 215, 215] : [40, 40, 40];
+            
+            fill(bgColor);
+            rect(0, 0, width, height);
+            
+            fill(appState.nightMode ? [30, 30, 35] : [255, 255, 255]);
+            rect(0, 0, width, 78);
+            
+            fill(textColor);
+            textSize(21);
+            textStyle(BOLD);
+            textAlign(CENTER, CENTER);
+            if (appState.currentBook) {
+                text(appState.currentBook.title, width / 2, 39);
+            }
+            
+            let backHover = mouseX < 95 && mouseY < 78;
+            fill(backHover ? [100, 200, 255] : textColor);
+            textAlign(LEFT, CENTER);
+            textSize(17);
+            text("← 戻る", 28, 39);
+            
+            let nightHover = mouseX > width - 95 && mouseY < 78;
+            fill(nightHover ? [255, 200, 100] : textColor);
+            textAlign(RIGHT, CENTER);
+            textSize(22);
+            text(appState.nightMode ? "☀️" : "🌙", width - 38, 39);
+            
+            if (appState.currentBook && appState.currentBook.content) {
+                push();
+                
+                let margin = max(55, width * 0.11);
+                let textWidth = min(780, width - margin * 2);
+                let startX = (width - textWidth) / 2;
+                let startY = 135;
+                
+                translate(0, appState.scrollOffset);
+                
+                fill(textColor);
+                let fontSize = constrain(appState.fontSize, 14, 26);
+                textSize(fontSize);
+                textAlign(LEFT, TOP);
+                textStyle(NORMAL);
+                textLeading(fontSize * 1.75);
+                
+                text(appState.currentBook.content, startX, startY, textWidth);
+                
+                pop();
+            }
+            
+            let contentHeight = appState.currentBook ? 
+                               appState.currentBook.content.length * 0.48 : 1900;
+            let progress = constrain(abs(appState.scrollOffset) / contentHeight, 0, 1);
+            
+            noStroke();
+            fill(appState.nightMode ? [55, 55, 65] : [225, 225, 225]);
+            rect(0, height - 5, width, 5);
+            
+            fill(100, 200, 255);
+            rect(0, height - 5, progress * width, 5);
+            
+            fill(textColor[0], textColor[1], textColor[2], 170);
+            textSize(13);
+            textAlign(RIGHT, CENTER);
+            let pagePercent = Math.round(progress * 100);
+            text(`${pagePercent}%`, width - 28, height - 32);
+            
+            drawFontControls();
+        }
+
+        function drawFontControls() {
+            let controlX = 28;
+            let controlY = height - 95;
+            
+            fill(appState.nightMode ? [38, 38, 48, 225] : [255, 255, 255, 225]);
+            rectMode(CORNER);
+            rect(controlX, controlY, 132, 56, 9);
+            
+            let textColor = appState.nightMode ? [215, 215, 215] : [40, 40, 40];
+            fill(textColor);
+            textAlign(LEFT, CENTER);
+            textSize(12);
+            text("文字サイズ", controlX + 13, controlY + 18);
+            
+            let smallHover = mouseX > controlX + 13 && mouseX < controlX + 50 &&
+                            mouseY > controlY + 32 && mouseY < controlY + 52;
+            fill(smallHover ? [100, 200, 255] : textColor);
+            textSize(15);
+            text("A-", controlX + 22, controlY + 42);
+            
+            let largeHover = mouseX > controlX + 70 && mouseX < controlX + 107 &&
+                            mouseY > controlY + 32 && mouseY < controlY + 52;
+            fill(largeHover ? [100, 200, 255] : textColor);
+            textSize(18);
+            text("A+", controlX + 80, controlY + 42);
+        }
+
+        function initBookCards() {
+            bookCards = appState.books.map(book => ({
+                ...book,
+                hoverScale: 1.0,
+                hoverY: 0
+            }));
+        }
+
+        function mousePressed() {
+            if (appState.screen === 'onboarding') {
+                if (onboardingStep === 0) {
+                    if (dist(mouseX, mouseY, width/2, height/2 + 50) < 100) {
+                        onboardingStep = 1;
+                    }
+                } else {
+                    let step = onboardingStep - 1;
+                    let question = onboardingOptions[step];
+                    let optionsY = height/2 - 70;
+                    let spacing = 85;
+                    
+                    for (let i = 0; i < question.options.length; i++) {
+                        let y = optionsY + i * spacing;
+                        if (mouseY > y - 28 && mouseY < y + 28 &&
+                            mouseX > width/2 - 170 && mouseX < width/2 + 170) {
+                            selectedTags.push(question.options[i]);
+                            onboardingStep++;
+                            
+                            if (onboardingStep > 3) {
+                                appState.screen = 'home';
+                                appState.user = { tags: selectedTags };
+                            }
+                            break;
+                        }
+                    }
+                }
+            } else if (appState.screen === 'home') {
+                let cardY = 195 - homeScrollY;
+                let buttonY = cardY + 135;
+                if (dist(mouseX, mouseY, width/2, buttonY) < 75) {
+                    appState.currentBook = appState.dailyPick;
+                    appState.screen = 'reader';
+                    appState.scrollOffset = 0;
+                    return;
+                }
+                
+                let numCards = min(4, bookCards.length);
+                let cardWidth = 210;
+                let cardHeight = 290;
+                let cardSpacing = 28;
+                let totalWidth = numCards * cardWidth + (numCards - 1) * cardSpacing;
+                let startX = (width - totalWidth) / 2 + cardWidth / 2;
+                let startY = 810 - homeScrollY;
+                
+                for (let i = 0; i < numCards; i++) {
+                    let x = startX + i * (cardWidth + cardSpacing);
+                    if (mouseX > x - cardWidth/2 && mouseX < x + cardWidth/2 &&
+                        mouseY > startY - cardHeight/2 && mouseY < startY + cardHeight/2) {
+                        appState.currentBook = bookCards[i];
+                        appState.screen = 'reader';
+                        appState.scrollOffset = 0;
+                        break;
+                    }
+                }
+                
+                if (mouseX > width - 215 && mouseX < width - 125 &&
+                    mouseY > homeScrollY + 22 && mouseY < homeScrollY + 62) {
+                    appState.nightMode = !appState.nightMode;
+                }
+            } else if (appState.screen === 'reader') {
+                if (mouseX < 95 && mouseY < 78) {
+                    appState.screen = 'home';
+                }
+                
+                if (mouseX > width - 95 && mouseY < 78) {
+                    appState.nightMode = !appState.nightMode;
+                }
+                
+                let controlX = 28;
+                let controlY = height - 95;
+                
+                if (mouseX > controlX + 13 && mouseX < controlX + 50 &&
+                    mouseY > controlY + 32 && mouseY < controlY + 52) {
+                    appState.fontSize = max(14, appState.fontSize - 2);
+                }
+                
+                if (mouseX > controlX + 70 && mouseX < controlX + 107 &&
+                    mouseY > controlY + 32 && mouseY < controlY + 52) {
+                    appState.fontSize = min(26, appState.fontSize + 2);
+                }
+            }
+        }
+
+        function mouseWheel(event) {
+            if (appState.screen === 'home') {
+                targetScrollY += event.delta * 0.75;
+                targetScrollY = constrain(targetScrollY, 0, 580);
+            } else if (appState.screen === 'reader') {
+                appState.scrollOffset -= event.delta * 1.15;
+                let maxScroll = appState.currentBook ? 
+                               -appState.currentBook.content.length * 0.48 : -1900;
+                appState.scrollOffset = constrain(appState.scrollOffset, maxScroll, 0);
+            }
+            return false;
+        }
+
+        function windowResized() {
+            resizeCanvas(windowWidth, windowHeight);
+            initBookCards();
+        }
+    </script>
+</body>
+</html>
